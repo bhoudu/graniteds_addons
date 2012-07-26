@@ -24,11 +24,12 @@ public class InflateAMF3MessageInterceptor implements AMF3MessageInterceptor {
 	public void before(final Message request) {
 		final Object header = request.getHeader(ZIP_HEADER);
 		final Object inflatedBytesHeader = request.getHeader(INFLATED_BYTES_LENGTH);
-		if (header != null) {
+		if ((header != null) && (inflatedBytesHeader != null)) {
 			LOGGER.debug("AMF header found {}:{}", ZIP_HEADER, header);
-			final Object requestBody = request.getBody();
 			final int inflatedBytesLength = (Integer) inflatedBytesHeader;
+			LOGGER.debug("AMF header found {}:{}", INFLATED_BYTES_LENGTH, inflatedBytesLength);
 
+			final Object requestBody = request.getBody();
 			if (requestBody instanceof byte[]) {
 				final byte[] deflatedBodyBytes = (byte[]) requestBody;
 				byte[] inflatedBodyBytes = null;
