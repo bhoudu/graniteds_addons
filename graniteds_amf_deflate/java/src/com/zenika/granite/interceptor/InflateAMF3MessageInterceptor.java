@@ -1,7 +1,6 @@
 package com.zenika.granite.interceptor;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
@@ -17,22 +16,24 @@ public class InflateAMF3MessageInterceptor implements AMF3MessageInterceptor {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(InflateAMF3MessageInterceptor.class);
 
-	protected static final int BUFFER_BYTES_LENGTH = 1024;
+	public static final String INFLATED_BYTES_LENGTH = "INFLATED_BYTES_LENGTH";
 
 	public static final String ZIP_HEADER = "DEFLATE";
 
 	@Override
 	public void before(final Message request) {
 		final Object header = request.getHeader(ZIP_HEADER);
+		final Object inflatedBytesHeader = request.getHeader(INFLATED_BYTES_LENGTH);
 		if (header != null) {
 			LOGGER.debug("AMF header found {}:{}", ZIP_HEADER, header);
 			final Object requestBody = request.getBody();
+			final int inflatedBytesLength = (Integer) inflatedBytesHeader;
 
 			if (requestBody instanceof byte[]) {
 				final byte[] deflatedBodyBytes = (byte[]) requestBody;
 				byte[] inflatedBodyBytes = null;
 				try {
-					inflatedBodyBytes = this.inflateBytes(deflatedBodyBytes);
+					inflatedBodyBytes = this.inflateBytes(deflatedBodyBytes, inflatedBytesLength);
 
 				} catch (final DataFormatException dataFormatException) {
 					LOGGER.warn("Cannot read deflated bytes! {} Skipping inflating ByteArray", deflatedBodyBytes);
@@ -54,26 +55,15 @@ public class InflateAMF3MessageInterceptor implements AMF3MessageInterceptor {
 		}
 	}
 
-	protected byte[] inflateBytes(final byte[] deflatedBytes) throws DataFormatException {
+	protected byte[] inflateBytes(final byte[] deflatedBytes, int inflatedBytesLength) throws DataFormatException {
 		final Inflater inflater = new Inflater(true);
 		inflater.setInput(deflatedBytes);
 
-		final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(deflatedBytes.length);
-		try {
-			final byte[] bufferBytes = new byte[BUFFER_BYTES_LENGTH];
-			while (!inflater.finished()) {
-				final int count = inflater.inflate(bufferBytes);
-				byteArrayOutputStream.write(bufferBytes, 0, count);
-			}
-		} finally {
-			try {
-				byteArrayOutputStream.close();
-			} catch (final IOException ioException) {
-				LOGGER.warn("OutpuStream? {} : {}", byteArrayOutputStream, ioException);
-			}
+		final byte[] inflatedBytes = new byte[inflatedBytesLength];
+		final int bytesRead = inflater.inflate(inflatedBytes);
+		if (bytesRead != inflatedBytesLength) {
+			LOGGER.warn("Bytes length is not correct! Expected: {} was: {}", inflatedBytesLength, bytesRead);
 		}
-
-		final byte[] inflatedBytes = byteArrayOutputStream.toByteArray();
 		return inflatedBytes;
 	}
 
