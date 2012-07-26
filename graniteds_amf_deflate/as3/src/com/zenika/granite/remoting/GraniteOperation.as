@@ -17,7 +17,11 @@ package com.zenika.granite.remoting {
 
 		public static const ZIP_HEADER:String = "DEFLATE";
 
+		public static const INFLATED_BYTES_LENGTH:String = "INFLATED_BYTES_LENGTH";
+
 		public static const DEFAULT_ZIP_HEADER_VALUE:String = "TIME_SPENT=";
+
+		public static const DEFLATE_BODY_MIN_SIZE:int = 2048;
 
 		public function GraniteOperation(remoteObject:AbstractService = null, name:String = null) {
 			super(remoteObject, name);
@@ -27,13 +31,17 @@ package com.zenika.granite.remoting {
 			var remotingMessage:RemotingMessage = message as RemotingMessage;
 			var byteArrayBody:ByteArray = new ByteArray();
 			byteArrayBody.writeObject(remotingMessage.body);
+			var inflatedBytesLength:int = byteArrayBody.length;
 
 			var start:int = getTimer();
 			byteArrayBody.deflate();
 			var end:int = getTimer();
 
-			remotingMessage.headers[ZIP_HEADER] = DEFAULT_ZIP_HEADER_VALUE + (end - start).toString() + "ms";
-			remotingMessage.body = byteArrayBody;
+			if (byteArrayBody.length > DEFLATE_BODY_MIN_SIZE) {
+				remotingMessage.headers[ZIP_HEADER] = DEFAULT_ZIP_HEADER_VALUE + (end - start).toString() + "ms";
+				remotingMessage.headers[INFLATED_BYTES_LENGTH] = inflatedBytesLength;
+				remotingMessage.body = byteArrayBody;
+			}
 
 			return super.invoke(remotingMessage, token);
 		}
