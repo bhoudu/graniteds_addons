@@ -9,7 +9,6 @@ package com.zenika.granite.remoting {
 	import mx.rpc.AbstractService;
 	import mx.rpc.AsyncToken;
 	import mx.rpc.remoting.Operation;
-	import mx.rpc.remoting.RemoteObject;
 
 	use namespace mx_internal;
 
